@@ -1,0 +1,663 @@
+<div class="pagina-reportes">
+  <header class="encabezado">
+    <div>
+      <span class="subtitulo">ATENCIÓN Y SEGUIMIENTO</span>
+      <h1>Reportes de fallas</h1>
+      <p>
+        Registra fallas de los equipos y consulta su seguimiento
+        hasta que sean resueltas.
+      </p>
+    </div>
+
+    <div class="acciones">
+      <button
+        type="button"
+        class="boton secundario"
+        [disabled]="cargando() || guardando()"
+        (click)="cargarDatos()"
+      >
+        {{ cargando() ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+
+      <button
+        type="button"
+        class="boton principal"
+        [disabled]="cargando() || guardando() || !conexionLista()"
+        (click)="abrirNuevo()"
+      >
+        + Nuevo reporte
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="aviso error" role="alert">
+      {{ error() }}
+    </div>
+  }
+
+  @if (mensaje()) {
+    <div class="aviso exito" role="status">
+      {{ mensaje() }}
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="aviso informacion" role="status">
+      Consultando equipos y reportes…
+    </div>
+  }
+
+  <section class="resumen" aria-label="Filtrar reportes por estado">
+    <button
+      type="button"
+      class="indicador azul"
+      [class.seleccionado]="filtroEstado() === ''"
+      [attr.aria-pressed]="filtroEstado() === ''"
+      (click)="filtroEstado.set('')"
+    >
+      <span>Todos los reportes</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().total }}
+      </strong>
+      <small>Historial completo</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador amarillo"
+      [class.seleccionado]="filtroEstado() === 'pendiente'"
+      [attr.aria-pressed]="filtroEstado() === 'pendiente'"
+      (click)="filtroEstado.set('pendiente')"
+    >
+      <span>Pendientes</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().pendientes }}
+      </strong>
+      <small>Por atender</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador morado"
+      [class.seleccionado]="filtroEstado() === 'revision'"
+      [attr.aria-pressed]="filtroEstado() === 'revision'"
+      (click)="filtroEstado.set('revision')"
+    >
+      <span>En revisión</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().revision }}
+      </strong>
+      <small>Diagnóstico en curso</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador naranja"
+      [class.seleccionado]="filtroEstado() === 'reparacion'"
+      [attr.aria-pressed]="filtroEstado() === 'reparacion'"
+      (click)="filtroEstado.set('reparacion')"
+    >
+      <span>En reparación</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().reparacion }}
+      </strong>
+      <small>Equipos en atención</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador verde"
+      [class.seleccionado]="filtroEstado() === 'resuelto'"
+      [attr.aria-pressed]="filtroEstado() === 'resuelto'"
+      (click)="filtroEstado.set('resuelto')"
+    >
+      <span>Resueltos</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().resueltos }}
+      </strong>
+      <small>Con solución registrada</small>
+    </button>
+  </section>
+
+  @if (mostrarFormulario) {
+    <section class="panel">
+      <div class="titulo-panel">
+        <div>
+          <span class="subtitulo">REGISTRO DE INCIDENCIA</span>
+          <h2>Nuevo reporte de falla</h2>
+          <p>Selecciona el equipo y describe el problema.</p>
+        </div>
+
+        <button
+          type="button"
+          class="boton secundario"
+          [disabled]="guardando() || cargando()"
+          (click)="cancelarNuevo()"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <form #formulario="ngForm" (ngSubmit)="guardarNuevo()">
+        <fieldset
+          [disabled]="guardando() || cargando() || !conexionLista()"
+        >
+          <div class="campos">
+            <div class="campo ancho-completo">
+              <label for="buscarEquipo">Buscar dispositivo</label>
+
+              <input
+                id="buscarEquipo"
+                name="buscarEquipo"
+                type="search"
+                [(ngModel)]="busquedaEquipo"
+                placeholder="Escribe etiqueta, tipo, marca, modelo o serie"
+              />
+            </div>
+
+            <div class="campo ancho-completo">
+              <label for="equipoReporte">Equipo *</label>
+
+              <select
+                id="equipoReporte"
+                name="equipoReporte"
+                [(ngModel)]="nuevo.equipoId"
+                required
+              >
+                <option [ngValue]="null">
+                  Selecciona un dispositivo
+                </option>
+
+                @for (equipo of equiposDisponibles; track equipo.id) {
+                  <option [ngValue]="equipo.id">
+                    {{ equipo.etiqueta }} · {{ equipo.tipo }} ·
+                    {{ equipo.marca }} {{ equipo.modelo }}
+                  </option>
+                }
+              </select>
+
+              <small>
+                Se muestran equipos que no están dados de baja
+                y no tienen otro reporte abierto.
+              </small>
+
+              @if (equiposDisponibles.length === 0) {
+                <small class="texto-advertencia">
+                  No hay equipos disponibles con esta búsqueda.
+                  Si el equipo ya tiene un reporte abierto,
+                  consúltalo en la lista de reportes.
+                </small>
+              }
+            </div>
+
+            @if (equipoElegido; as equipo) {
+              <div class="ficha-equipo ancho-completo">
+                <div>
+                  <span class="subtitulo">EQUIPO SELECCIONADO</span>
+                  <h3>{{ equipo.tipo }} · {{ equipo.etiqueta }}</h3>
+                  <p>{{ equipo.marca }} {{ equipo.modelo }}</p>
+                </div>
+
+                <dl class="datos-equipo">
+                  <div>
+                    <dt>Ubicación</dt>
+                    <dd>{{ equipo.ubicacion || 'Sin ubicación' }}</dd>
+                  </div>
+
+                  <div>
+                    <dt>Área</dt>
+                    <dd>{{ equipo.area || 'Sin área asignada' }}</dd>
+                  </div>
+
+                  <div>
+                    <dt>Serie</dt>
+                    <dd>{{ equipo.serie || 'Sin serie' }}</dd>
+                  </div>
+                </dl>
+              </div>
+            }
+
+            <div class="campo">
+              <label for="reportadoPor">Quién reporta *</label>
+
+              <input
+                id="reportadoPor"
+                name="reportadoPor"
+                [(ngModel)]="nuevo.reportadoPor"
+                maxlength="200"
+                placeholder="Nombre del colaborador"
+                required
+              />
+            </div>
+
+            <div class="campo">
+              <label for="prioridadReporte">Prioridad *</label>
+
+              <select
+                id="prioridadReporte"
+                name="prioridadReporte"
+                [(ngModel)]="nuevo.prioridad"
+                required
+              >
+                @for (prioridad of prioridades; track prioridad.valor) {
+                  <option [value]="prioridad.valor">
+                    {{ prioridad.nombre }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="campo ancho-completo">
+              <label for="descripcionFalla">
+                Descripción de la falla *
+              </label>
+
+              <textarea
+                id="descripcionFalla"
+                name="descripcionFalla"
+                [(ngModel)]="nuevo.descripcion"
+                rows="5"
+                maxlength="2000"
+                placeholder="Describe qué sucede, desde cuándo y qué has intentado. Ej. El equipo no enciende al presionar el botón."
+                required
+              ></textarea>
+
+              <small>{{ nuevo.descripcion.length }}/2000 caracteres</small>
+            </div>
+          </div>
+
+          <div class="pie-formulario">
+            <small>* Campos obligatorios</small>
+
+            <div class="acciones">
+              <button
+                type="button"
+                class="boton secundario"
+                (click)="cancelarNuevo()"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                class="boton principal"
+                [disabled]="formulario.invalid || !nuevo.reportadoPor.trim() || !nuevo.descripcion.trim() || guardando()"
+              >
+                {{ guardando() ? 'Registrando…' : 'Registrar reporte' }}
+              </button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+  }
+
+  @if (seleccionado(); as reporte) {
+    <section class="panel">
+      <div class="titulo-panel">
+        <div>
+          <span class="folio">{{ reporte.folio }}</span>
+          <h2>{{ reporte.equipo.tipo }} · {{ reporte.equipo.etiqueta }}</h2>
+          <p>{{ reporte.equipo.marca }} {{ reporte.equipo.modelo }}</p>
+        </div>
+
+        <button
+          type="button"
+          class="boton secundario"
+          [disabled]="guardando() || cargando()"
+          (click)="cerrarDetalle()"
+        >
+          Cerrar detalle
+        </button>
+      </div>
+
+      <dl class="datos-reporte">
+        <div>
+          <dt>Reportado por</dt>
+          <dd>{{ reporte.reportadoPor }}</dd>
+        </div>
+
+        <div>
+          <dt>Fecha de reporte</dt>
+          <dd>{{ fecha(reporte.fechaReporte) }}</dd>
+        </div>
+
+        <div>
+          <dt>Prioridad</dt>
+          <dd>
+            <span
+              class="etiqueta"
+              [attr.data-prioridad]="reporte.prioridad"
+            >
+              {{ nombrePrioridad(reporte.prioridad) }}
+            </span>
+          </dd>
+        </div>
+
+        <div>
+          <dt>Estado del reporte</dt>
+          <dd>
+            <span
+              class="etiqueta"
+              [attr.data-estado]="reporte.estado"
+            >
+              {{ nombreEstado(reporte.estado) }}
+            </span>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="bloque-detalle">
+        <h3>Falla reportada</h3>
+        <p class="texto-largo">{{ reporte.descripcion }}</p>
+      </div>
+
+      @if (reporte.estado === 'resuelto') {
+        <div class="campos">
+          <div class="bloque-detalle">
+            <h3>Diagnóstico</h3>
+            <p class="texto-largo">
+              {{ reporte.diagnostico || 'Sin diagnóstico registrado' }}
+            </p>
+          </div>
+
+          <div class="bloque-detalle">
+            <h3>Solución realizada</h3>
+            <p class="texto-largo">
+              {{ reporte.solucion || 'Sin solución registrada' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="aviso exito">
+          Resuelto el {{ fecha(reporte.fechaResolucion) }}.
+          El reporte se conserva para consulta.
+        </div>
+      } @else {
+        <form
+          #formSeguimiento="ngForm"
+          (ngSubmit)="guardarSeguimiento()"
+        >
+          <fieldset
+            [disabled]="guardando() || cargando() || !conexionLista()"
+          >
+            <div class="campos">
+              <div class="campo ancho-completo">
+                <label for="estadoSeguimiento">
+                  Actualizar estado *
+                </label>
+
+                <select
+                  id="estadoSeguimiento"
+                  name="estadoSeguimiento"
+                  [(ngModel)]="seguimiento.estado"
+                  required
+                >
+                  @for (estado of estadosPermitidos; track estado.valor) {
+                    <option [value]="estado.valor">
+                      {{ estado.nombre }}
+                    </option>
+                  }
+                </select>
+
+                <small>
+                  Guarda En revisión para habilitar las opciones
+                  En reparación y Resuelto.
+                </small>
+              </div>
+
+              <div class="campo ancho-completo">
+                <label for="diagnostico">
+                  Diagnóstico
+                  {{
+                    seguimiento.estado === 'reparacion' ||
+                    seguimiento.estado === 'resuelto'
+                      ? '*'
+                      : ''
+                  }}
+                </label>
+
+                <textarea
+                  id="diagnostico"
+                  name="diagnostico"
+                  [(ngModel)]="seguimiento.diagnostico"
+                  [required]="seguimiento.estado === 'reparacion' || seguimiento.estado === 'resuelto'"
+                  maxlength="2000"
+                  rows="4"
+                  placeholder="Describe la revisión realizada y la causa encontrada."
+                ></textarea>
+
+                <small>
+                  {{ seguimiento.diagnostico.length }}/2000 caracteres
+                </small>
+              </div>
+
+              <div class="campo ancho-completo">
+                <label for="solucion">
+                  Solución realizada
+                  {{ seguimiento.estado === 'resuelto' ? '*' : '' }}
+                </label>
+
+                <textarea
+                  id="solucion"
+                  name="solucion"
+                  [(ngModel)]="seguimiento.solucion"
+                  [required]="seguimiento.estado === 'resuelto'"
+                  maxlength="2000"
+                  rows="4"
+                  placeholder="Describe el trabajo realizado y el resultado."
+                ></textarea>
+
+                <small>
+                  {{ seguimiento.solucion.length }}/2000 caracteres
+                </small>
+              </div>
+            </div>
+
+            <div class="pie-formulario">
+              <small>
+                Al enviar a reparación, también se actualiza
+                el estado del equipo en el inventario.
+              </small>
+
+              <button
+                type="submit"
+                class="boton principal"
+                [disabled]="formSeguimiento.invalid || guardando()"
+              >
+                {{ guardando() ? 'Guardando…' : 'Guardar seguimiento' }}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      }
+
+      <p class="nota">
+        Última actualización: {{ fecha(reporte.fechaActualizacion) }}
+      </p>
+    </section>
+  }
+
+  <section class="panel" [attr.aria-busy]="cargando()">
+    <div class="titulo-panel">
+      <div>
+        <h2>Reportes realizados</h2>
+        <p>
+          Consulta las fallas registradas y abre un reporte para atenderlo.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="boton secundario"
+        [disabled]="cargando() || guardando() || !conexionLista() || !reportesFiltrados().length"
+        (click)="exportarExcel()"
+      >
+        Exportar Excel
+      </button>
+    </div>
+
+    <div class="filtros">
+      <div class="campo">
+        <label for="buscarReporte">Buscar reporte</label>
+
+        <input
+          id="buscarReporte"
+          name="buscarReporte"
+          type="search"
+          [ngModel]="busqueda()"
+          (ngModelChange)="busqueda.set($event)"
+          placeholder="Folio, etiqueta, colaborador, área o falla"
+        />
+      </div>
+
+      <div class="campo">
+        <label for="filtroEstadoReporte">Estado</label>
+
+        <select
+          id="filtroEstadoReporte"
+          name="filtroEstadoReporte"
+          [ngModel]="filtroEstado()"
+          (ngModelChange)="filtroEstado.set($event)"
+        >
+          <option value="">Todos los reportes</option>
+
+          @for (estado of estados; track estado.valor) {
+            <option [value]="estado.valor">
+              {{ estado.nombre }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <button
+        type="button"
+        class="boton secundario"
+        [disabled]="!busqueda() && !filtroEstado()"
+        (click)="limpiarFiltros()"
+      >
+        Limpiar
+      </button>
+    </div>
+
+    @if (!cargando() && conexionLista()) {
+      <p class="contador">
+        Mostrando {{ reportesFiltrados().length }}
+        de {{ reportes().length }} reportes.
+      </p>
+    }
+
+    <div
+      class="tabla-contenedor"
+      role="region"
+      aria-label="Listado de reportes de fallas"
+      tabindex="0"
+    >
+      <table>
+        <thead>
+        <tr>
+          <th scope="col">Folio</th>
+          <th scope="col">Equipo</th>
+          <th scope="col">Reporta</th>
+          <th scope="col">Falla</th>
+          <th scope="col">Prioridad</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Fecha</th>
+          <th scope="col">Seguimiento</th>
+        </tr>
+        </thead>
+
+        <tbody>
+          @if (cargando()) {
+            <tr>
+              <td colspan="8" class="vacio">
+                Cargando reportes…
+              </td>
+            </tr>
+          } @else if (!conexionLista()) {
+            <tr>
+              <td colspan="8" class="vacio">
+                <strong>No se pudo cargar la información</strong>
+                <p>Comprueba el backend y pulsa Actualizar.</p>
+              </td>
+            </tr>
+          } @else {
+            @for (reporte of reportesFiltrados(); track reporte.id) {
+              <tr>
+                <td>
+                  <strong class="folio-tabla">{{ reporte.folio }}</strong>
+                </td>
+
+                <td>
+                  <strong>{{ reporte.equipo.etiqueta }}</strong>
+                  <small>
+                    {{ reporte.equipo.tipo }} · {{ reporte.equipo.marca }}
+                  </small>
+                </td>
+
+                <td>{{ reporte.reportadoPor }}</td>
+
+                <td class="descripcion">
+                  {{ reporte.descripcion }}
+                </td>
+
+                <td>
+                  <span
+                    class="etiqueta"
+                    [attr.data-prioridad]="reporte.prioridad"
+                  >
+                    {{ nombrePrioridad(reporte.prioridad) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="etiqueta"
+                    [attr.data-estado]="reporte.estado"
+                  >
+                    {{ nombreEstado(reporte.estado) }}
+                  </span>
+                </td>
+
+                <td class="fecha">
+                  {{ fecha(reporte.fechaReporte) }}
+                </td>
+
+                <td>
+                  <button
+                    type="button"
+                    class="boton secundario"
+                    [disabled]="guardando()"
+                    [attr.aria-label]="'Ver seguimiento de ' + reporte.folio"
+                    (click)="abrirDetalle(reporte)"
+                  >
+                    {{
+                      reporte.estado === 'resuelto'
+                        ? 'Ver detalle'
+                        : 'Atender'
+                    }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="vacio">
+                  @if (reportes().length === 0) {
+                    <strong>Todavía no hay reportes registrados</strong>
+                    <p>
+                      Pulsa Nuevo reporte para registrar la falla de un equipo.
+                    </p>
+                  } @else {
+                    <strong>No se encontraron reportes</strong>
+                    <p>Cambia la búsqueda o el estado seleccionado.</p>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

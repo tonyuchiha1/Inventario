@@ -1,0 +1,19 @@
+<div class="inventario">
+  <aside class="menu">
+    <h2>Inventario TI</h2>
+
+    <nav>
+      <a routerLink="/" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }">
+        🏠 Inicio
+      </a>
+      <a routerLink="/equipos" routerLinkActive="activo">💻 Equipos</a>
+      <a routerLink="/ubicaciones" routerLinkActive="activo">📍 Ubicaciones</a>
+      <a routerLink="/reparaciones" routerLinkActive="activo">🔧 Reparaciones</a>
+      <a routerLink="/reportes" routerLinkActive="activo">📋 Reportes</a>
+    </nav>
+  </aside>
+
+  <main class="contenido">
+    <router-outlet />
+  </main>
+</div>

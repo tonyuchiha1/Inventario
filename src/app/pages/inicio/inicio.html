@@ -1,0 +1,211 @@
+<header>
+  <div>
+    <h1>Panel de inventario</h1>
+    <p>Control y seguimiento de equipos de tecnología</p>
+  </div>
+
+  <button
+    type="button"
+    routerLink="/equipos"
+    [queryParams]="{ accion: 'agregar' }"
+  >
+    + Agregar equipo
+  </button>
+</header>
+
+@if (cargando()) {
+  <p role="status">Cargando resumen del inventario…</p>
+}
+
+@if (error()) {
+  <div class="detalle" role="alert">
+    <p>{{ error() }}</p>
+
+    <button
+      type="button"
+      [disabled]="cargando()"
+      (click)="cargarResumen()"
+    >
+      Reintentar
+    </button>
+  </div>
+}
+
+<section class="tarjetas" aria-label="Resumen del inventario">
+  <article
+    class="tarjeta azul"
+    routerLink="/equipos"
+    tabindex="0"
+    role="link"
+    (keydown.enter)="totalEquipos.click()"
+    #totalEquipos
+  >
+    <span aria-hidden="true">💻</span>
+    <h3>Total de equipos</h3>
+    <strong>
+      {{ cargando() || error() ? '—' : resumen().total }}
+    </strong>
+    <p>Equipos registrados</p>
+  </article>
+
+  <article
+    class="tarjeta verde"
+    routerLink="/equipos"
+    [queryParams]="{ estado: 'activo' }"
+    tabindex="0"
+    role="link"
+    (keydown.enter)="equiposActivos.click()"
+    #equiposActivos
+  >
+    <span aria-hidden="true">✅</span>
+    <h3>Equipos activos</h3>
+    <strong>
+      {{ cargando() || error() ? '—' : resumen().activos }}
+    </strong>
+    <p>Asignados a colaboradores</p>
+  </article>
+
+  <article
+    class="tarjeta amarillo"
+    routerLink="/equipos"
+    [queryParams]="{ estado: 'nuevo' }"
+    tabindex="0"
+    role="link"
+    (keydown.enter)="equiposNuevos.click()"
+    #equiposNuevos
+  >
+    <span aria-hidden="true">🆕</span>
+    <h3>Equipos nuevos</h3>
+    <strong>
+      {{ cargando() || error() ? '—' : resumen().nuevos }}
+    </strong>
+    <p>Pendientes de asignación</p>
+  </article>
+
+  <article
+    class="tarjeta naranja"
+    routerLink="/equipos"
+    [queryParams]="{ estado: 'reparacion' }"
+    tabindex="0"
+    role="link"
+    (keydown.enter)="reparaciones.click()"
+    #reparaciones
+  >
+    <span aria-hidden="true">🔧</span>
+    <h3>En reparación</h3>
+    <strong>
+      {{ cargando() || error() ? '—' : resumen().reparacion }}
+    </strong>
+    <p>En revisión técnica</p>
+  </article>
+
+  <article
+    class="tarjeta rojo"
+    routerLink="/equipos"
+    [queryParams]="{ estado: 'desechado' }"
+    tabindex="0"
+    role="link"
+    (keydown.enter)="equiposBaja.click()"
+    #equiposBaja
+  >
+    <span aria-hidden="true">🗑️</span>
+    <h3>Dados de baja</h3>
+    <strong>
+      {{ cargando() || error() ? '—' : resumen().desechados }}
+    </strong>
+    <p>Fuera de servicio</p>
+  </article>
+
+  <article
+    class="tarjeta morado"
+    routerLink="/ubicaciones"
+    tabindex="0"
+    role="link"
+    (keydown.enter)="ubicaciones.click()"
+    #ubicaciones
+  >
+    <span aria-hidden="true">📍</span>
+    <h3>Ubicaciones</h3>
+    <strong>
+      {{ cargando() || error() ? '—' : resumen().ubicaciones }}
+    </strong>
+    <p>Ubicaciones con equipos registrados</p>
+  </article>
+</section>
+
+<section class="detalle" [attr.aria-busy]="cargando()">
+  <h2>Equipos por área</h2>
+  <p>
+    Consulta cuántos dispositivos tiene cada área y abre su inventario.
+  </p>
+
+  <div class="tabla">
+    <table>
+      <thead>
+      <tr>
+        <th scope="col">Área</th>
+        <th scope="col">Equipos</th>
+        <th scope="col">Consultar</th>
+      </tr>
+      </thead>
+
+      <tbody>
+        @if (cargando()) {
+          <tr>
+            <td colspan="3" class="vacio">
+              Cargando información…
+            </td>
+          </tr>
+        } @else if (error()) {
+          <tr>
+            <td colspan="3" class="vacio">
+              No se pudo cargar el resumen. Pulsa Reintentar.
+            </td>
+          </tr>
+        } @else {
+          @for (grupo of equiposPorArea(); track grupo.filtro) {
+            <tr>
+              <td>{{ grupo.area }}</td>
+
+              <td>
+                <strong>{{ grupo.cantidad }}</strong>
+              </td>
+
+              <td>
+                <a
+                  routerLink="/equipos"
+                  [queryParams]="{ area: grupo.filtro }"
+                  [attr.aria-label]="'Ver equipos: ' + grupo.area"
+                >
+                  Ver equipos →
+                </a>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="vacio">
+                Todavía no hay equipos registrados.
+                Agrega un equipo para comenzar.
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <button
+    type="button"
+    routerLink="/equipos"
+  >
+    Ver inventario completo
+  </button>
+
+  <button
+    type="button"
+    [disabled]="cargando()"
+    (click)="cargarResumen()"
+  >
+    {{ cargando() ? 'Actualizando…' : 'Actualizar resumen' }}
+  </button>
+</section>

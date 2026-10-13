@@ -1,0 +1,760 @@
+<div class="pagina-equipos">
+  <header class="encabezado">
+    <div>
+      <span class="subtitulo">ADMINISTRACIÓN DE ACTIVOS</span>
+      <h1>Equipos</h1>
+      <p>Registra, organiza y consulta tus dispositivos.</p>
+    </div>
+
+    <div class="acciones">
+      <button
+        type="button"
+        class="boton secundario"
+        (click)="descargarPlantilla()"
+      >
+        Descargar plantilla
+      </button>
+
+      <button
+        type="button"
+        class="boton secundario"
+        [disabled]="importando() || guardando() || cargando() || !conexionLista()"
+        (click)="archivo.click()"
+      >
+        {{ importando() ? 'Procesando…' : 'Importar Excel / CSV' }}
+      </button>
+
+      <input
+        #archivo
+        hidden
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        (change)="seleccionarArchivo($event)"
+      />
+
+      <button
+        type="button"
+        class="boton principal"
+        [disabled]="guardando() || importando() || cargando() || !conexionLista()"
+        (click)="abrirFormulario()"
+      >
+        + Agregar equipo
+      </button>
+    </div>
+  </header>
+
+  @if (mensaje) {
+    <div class="aviso exito" role="status">{{ mensaje }}</div>
+  }
+
+  @if (error) {
+    <div class="aviso error" role="alert">{{ error }}</div>
+  }
+
+  @if (errorCatalogo) {
+    <div class="aviso error" role="alert">{{ errorCatalogo }}</div>
+  }
+
+  @if (avisoCatalogo) {
+    <div class="aviso informacion" role="status">
+      {{ avisoCatalogo }}
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="aviso informacion" role="status">
+      Consultando inventario…
+    </div>
+  }
+
+  <section class="resumen" aria-label="Resumen de equipos">
+    <article class="indicador">
+      <span>Total de equipos</span>
+      <strong>{{ cargando() ? '—' : resumen().total }}</strong>
+      <small>Registrados en el inventario</small>
+    </article>
+
+    <article class="indicador verde">
+      <span>Asignados</span>
+      <strong>{{ cargando() ? '—' : resumen().activos }}</strong>
+      <small>En uso por colaboradores</small>
+    </article>
+
+    <article class="indicador azul">
+      <span>Disponibles</span>
+      <strong>{{ cargando() ? '—' : resumen().disponibles }}</strong>
+      <small>Listos para asignar</small>
+    </article>
+
+    <article class="indicador naranja">
+      <span>En reparación</span>
+      <strong>{{ cargando() ? '—' : resumen().reparacion }}</strong>
+      <small>En revisión técnica</small>
+    </article>
+  </section>
+
+  @if (mostrarFormulario) {
+    <section class="panel">
+      <div class="titulo-panel">
+        <div>
+          <h2>
+            {{ equipoEnEdicion ? 'Editar equipo' : 'Registrar equipo' }}
+          </h2>
+          <p>
+            Puedes repetir una etiqueta en distintos tipos de dispositivo.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="cerrar"
+          aria-label="Cerrar formulario"
+          [disabled]="guardando() || importando()"
+          (click)="cancelarFormulario()"
+        >
+          ×
+        </button>
+      </div>
+
+      <form #formulario="ngForm" (ngSubmit)="guardarEquipo()">
+        <fieldset
+          [disabled]="guardando() || importando() || cargando() || !conexionLista()"
+          style="border: 0; padding: 0; margin: 0; min-width: 0;"
+        >
+          <div class="campos">
+            <div class="campo">
+              <label for="etiqueta">Etiqueta / ID *</label>
+              <input
+                id="etiqueta"
+                name="etiqueta"
+                [(ngModel)]="nuevoEquipo.etiqueta"
+                placeholder="Ej. ID01EE00001"
+                maxlength="80"
+                required
+              />
+            </div>
+
+            <div class="campo">
+              <label for="tipo">Tipo de dispositivo *</label>
+              <select
+                id="tipo"
+                name="tipo"
+                [ngModel]="nuevoEquipo.tipo"
+                (ngModelChange)="cambiarTipo($event)"
+                required
+              >
+                <option value="">Selecciona un tipo</option>
+
+                @for (tipo of tipos; track tipo) {
+                  <option [value]="tipo">{{ tipo }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="marca">Marca *</label>
+              <select
+                #selectorMarca
+                id="marca"
+                name="marca"
+                [ngModel]="nuevoEquipo.marca"
+                (change)="seleccionarMarca(selectorMarca.value); selectorMarca.value = nuevoEquipo.marca"
+                required
+              >
+                <option value="">Selecciona una marca</option>
+
+                @for (marca of marcasDisponibles; track marca) {
+                  <option [value]="marca">{{ marca }}</option>
+                }
+
+                <option value="__agregar_marca__">
+                  + Agregar nueva marca
+                </option>
+              </select>
+
+              <small>
+                Puedes agregar una marca desde esta lista.
+              </small>
+            </div>
+
+            <div class="campo">
+              <label for="modelo">Modelo *</label>
+              <select
+                #selectorModelo
+                id="modelo"
+                name="modelo"
+                [ngModel]="nuevoEquipo.modelo"
+                (change)="seleccionarModelo(selectorModelo.value); selectorModelo.value = nuevoEquipo.modelo"
+                required
+              >
+                <option value="">Selecciona un modelo</option>
+
+                @for (modelo of modelosPorMarca; track modelo) {
+                  <option [value]="modelo">{{ modelo }}</option>
+                }
+
+                <option
+                  value="__agregar_modelo__"
+                  [disabled]="!nuevoEquipo.tipo || !nuevoEquipo.marca"
+                >
+                  + Agregar nuevo modelo
+                </option>
+              </select>
+
+              <small>
+                @if (!nuevoEquipo.tipo || !nuevoEquipo.marca) {
+                  Selecciona primero el tipo y la marca.
+                } @else {
+                  Modelos de {{ nuevoEquipo.tipo }} /
+                  {{ nuevoEquipo.marca }}.
+                }
+              </small>
+            </div>
+
+            @if (mostrarNuevaMarca) {
+              <div class="editor-catalogo ancho-completo">
+                <h3>Agregar marca</h3>
+                <p>Se guardará en el catálogo de este navegador.</p>
+
+                <div class="campo">
+                  <label for="nuevaMarca">Nombre de la marca</label>
+                  <input
+                    id="nuevaMarca"
+                    [(ngModel)]="nuevaMarca"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Ej. Dell, HP o Lenovo"
+                    maxlength="100"
+                    (keydown.enter)="$event.preventDefault(); guardarMarca()"
+                  />
+                </div>
+
+                <div class="acciones">
+                  <button
+                    type="button"
+                    class="boton secundario"
+                    (click)="cancelarCatalogo()"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    class="boton principal"
+                    [disabled]="!nuevaMarca.trim()"
+                    (click)="guardarMarca()"
+                  >
+                    Guardar marca
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (mostrarNuevoModelo) {
+              <div class="editor-catalogo ancho-completo">
+                <h3>Agregar modelo</h3>
+                <p>
+                  Tipo: {{ nuevoEquipo.tipo }} ·
+                  Marca: {{ nuevoEquipo.marca }}
+                </p>
+
+                <div class="campo">
+                  <label for="nuevoModelo">Nombre del modelo</label>
+                  <input
+                    id="nuevoModelo"
+                    [(ngModel)]="nuevoModelo"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Ej. OptiPlex 7010"
+                    maxlength="150"
+                    (keydown.enter)="$event.preventDefault(); guardarModelo()"
+                  />
+                </div>
+
+                <div class="acciones">
+                  <button
+                    type="button"
+                    class="boton secundario"
+                    (click)="cancelarCatalogo()"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    class="boton principal"
+                    [disabled]="!nuevoModelo.trim()"
+                    (click)="guardarModelo()"
+                  >
+                    Guardar modelo
+                  </button>
+                </div>
+              </div>
+            }
+
+            <div class="campo">
+              <label for="serie">Número de serie</label>
+              <input
+                id="serie"
+                name="serie"
+                [(ngModel)]="nuevoEquipo.serie"
+                placeholder="Serie del fabricante"
+                maxlength="150"
+              />
+            </div>
+
+            <div class="campo">
+              <label for="estado">Estado *</label>
+              <select
+                id="estado"
+                name="estado"
+                [(ngModel)]="nuevoEquipo.estado"
+                required
+              >
+                @for (estado of estados; track estado.valor) {
+                  <option [value]="estado.valor">
+                    {{ estado.nombre }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="ubicacion">Ubicación *</label>
+              <input
+                id="ubicacion"
+                name="ubicacion"
+                [(ngModel)]="nuevoEquipo.ubicacion"
+                (blur)="nuevoEquipo.ubicacion = primeraMayuscula(nuevoEquipo.ubicacion)"
+                placeholder="Ej. Carbonera"
+                maxlength="200"
+                required
+              />
+              <small>Sucursal, edificio o sede del equipo.</small>
+            </div>
+
+            <div class="campo">
+              <label for="area">Área</label>
+
+              <select
+                id="area"
+                name="area"
+                [(ngModel)]="nuevoEquipo.area"
+              >
+                <option value="">Sin área asignada</option>
+
+                @if (areaActualFueraDeCatalogo) {
+                  <option [value]="nuevoEquipo.area" disabled>
+                    {{ nuevoEquipo.area }} — selecciona un área del catálogo
+                  </option>
+                }
+
+                @for (area of areasDisponibles; track area) {
+                  <option [value]="area">{{ area }}</option>
+                }
+              </select>
+
+              <small>
+                Selecciona el área a la que pertenece el equipo.
+              </small>
+            </div>
+
+            <div class="campo ancho-completo">
+              <label for="usuario">
+                Usuario / colaborador
+                {{ nuevoEquipo.estado === 'activo' ? '*' : '' }}
+              </label>
+              <input
+                id="usuario"
+                name="usuario"
+                [(ngModel)]="nuevoEquipo.usuario"
+                (blur)="nuevoEquipo.usuario = primeraMayuscula(nuevoEquipo.usuario)"
+                [required]="nuevoEquipo.estado === 'activo'"
+                placeholder="Nombre del responsable"
+                maxlength="200"
+              />
+            </div>
+
+            <div class="campo ancho-completo">
+              <label for="observaciones">Observaciones</label>
+              <textarea
+                id="observaciones"
+                name="observaciones"
+                [(ngModel)]="nuevoEquipo.observaciones"
+                (blur)="nuevoEquipo.observaciones = primeraMayuscula(nuevoEquipo.observaciones ?? '')"
+                placeholder="Ej. Incluye cargador o requiere mantenimiento."
+                rows="4"
+                maxlength="2000"
+              ></textarea>
+
+              <small>
+                Campo opcional ·
+                {{ (nuevoEquipo.observaciones ?? '').length }}/2000 caracteres
+              </small>
+            </div>
+          </div>
+
+          <div class="pie-formulario">
+            <small>* Campos obligatorios</small>
+
+            <div class="acciones">
+              <button
+                type="button"
+                class="boton secundario"
+                (click)="cancelarFormulario()"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                class="boton principal"
+                [disabled]="formulario.invalid || mostrarNuevaMarca || mostrarNuevoModelo || areaActualFueraDeCatalogo || guardando() || importando()"
+              >
+                {{
+                  guardando()
+                    ? 'Guardando…'
+                    : equipoEnEdicion
+                      ? 'Guardar cambios'
+                      : 'Guardar equipo'
+                }}
+              </button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+  }
+
+  @if (vistaPrevia().length > 0) {
+    <section class="panel">
+      <div class="titulo-panel">
+        <div>
+          <h2>Revisar importación</h2>
+          <p>{{ nombreArchivo }}</p>
+        </div>
+
+        <button
+          type="button"
+          class="cerrar"
+          aria-label="Cancelar importación"
+          [disabled]="importando() || guardando()"
+          (click)="cancelarImportacion()"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="aviso informacion" role="status">
+        @if (importando()) {
+          Guardando equipos. Espera a que termine la importación.
+        } @else {
+          {{ filasValidas().length }} filas válidas y
+          {{ vistaPrevia().length - filasValidas().length }} con errores.
+            Solo se guardarán las filas válidas.
+        }
+      </div>
+
+      <div class="tabla-contenedor preview">
+        <table>
+          <thead>
+          <tr>
+            <th scope="col">Fila</th>
+
+            @for (campo of campos; track campo.clave) {
+              <th scope="col">{{ campo.etiqueta }}</th>
+            }
+
+            <th scope="col">Revisión</th>
+          </tr>
+          </thead>
+
+          <tbody>
+            @for (fila of vistaPrevia(); track fila.fila) {
+              <tr [class.fila-error]="fila.errores.length > 0">
+                <td>{{ fila.fila }}</td>
+
+                @for (campo of campos; track campo.clave) {
+                  <td
+                    [class.observaciones]="campo.clave === 'observaciones'"
+                  >
+                    @if (campo.clave === 'estado') {
+                      {{ nombreEstado(fila.equipo.estado) }}
+                    } @else {
+                      {{ fila.equipo[campo.clave] || '—' }}
+                    }
+                  </td>
+                }
+
+                <td class="revision">
+                  @if (fila.errores.length > 0) {
+                    @for (problema of fila.errores; track $index) {
+                      <div>{{ problema }}</div>
+                    }
+                  } @else {
+                    <span class="correcto">Lista para guardar</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pie-formulario">
+        <small>
+          Corrige los errores en Excel y vuelve a subirlo.
+          La hoja Areas de la plantilla contiene los nombres permitidos.
+        </small>
+
+        <button
+          type="button"
+          class="boton principal"
+          [disabled]="importando() || guardando() || cargando() || !conexionLista()"
+          (click)="confirmarImportacion()"
+        >
+          {{
+            importando()
+              ? 'Importando…'
+              : 'Validar y guardar filas pendientes'
+          }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (equipoPendienteEliminar; as pendiente) {
+    <section class="panel confirmacion-eliminar" role="alert">
+      <h2>Eliminar equipo</h2>
+
+      <p>
+        ¿Quieres eliminar {{ pendiente.tipo }}
+        con etiqueta {{ pendiente.etiqueta }}?
+        Esta acción no se puede deshacer.
+      </p>
+
+      <div class="acciones">
+        <button
+          type="button"
+          class="boton secundario"
+          [disabled]="guardando() || importando()"
+          (click)="cancelarEliminacion()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="boton peligro"
+          [disabled]="guardando() || importando() || cargando() || !conexionLista()"
+          (click)="confirmarEliminacion()"
+        >
+          {{ guardando() ? 'Eliminando…' : 'Sí, eliminar' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  <section class="panel" [attr.aria-busy]="cargando()">
+    <div class="titulo-panel">
+      <div>
+        <h2>Inventario de equipos</h2>
+        <p>
+          Mostrando {{ equiposFiltrados.length }}
+          de {{ equipos().length }} equipos
+        </p>
+      </div>
+
+      <div class="acciones">
+        <button
+          type="button"
+          class="boton secundario"
+          [disabled]="!busqueda && !filtroEstado && !filtroArea"
+          (click)="limpiarFiltros()"
+        >
+          Limpiar filtros
+        </button>
+
+        <button
+          type="button"
+          class="boton secundario"
+          [disabled]="cargando() || guardando() || importando()"
+          (click)="cargarEquipos()"
+        >
+          {{ cargando() ? 'Actualizando…' : 'Actualizar' }}
+        </button>
+      </div>
+    </div>
+
+    <div
+      class="filtros"
+      style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));"
+    >
+      <div class="campo">
+        <label for="busqueda">Buscar equipo</label>
+        <input
+          id="busqueda"
+          name="busqueda"
+          type="search"
+          [(ngModel)]="busqueda"
+          placeholder="Etiqueta, marca, usuario, ubicación o área…"
+        />
+      </div>
+
+      <div class="campo">
+        <label for="filtroEstado">Estado</label>
+        <select
+          id="filtroEstado"
+          name="filtroEstado"
+          [(ngModel)]="filtroEstado"
+        >
+          <option value="">Todos los estados</option>
+
+          @for (estado of estados; track estado.valor) {
+            <option [value]="estado.valor">
+              {{ estado.nombre }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="filtroArea">Área</label>
+        <select
+          id="filtroArea"
+          name="filtroArea"
+          [(ngModel)]="filtroArea"
+        >
+          <option value="">Todas las áreas</option>
+          <option value="__sin_area__">Sin área asignada</option>
+
+          @for (area of areasDisponibles; track area) {
+            <option [value]="area">{{ area }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="tabla-contenedor">
+      <table>
+        <thead>
+        <tr>
+          <th scope="col">Etiqueta</th>
+          <th scope="col">Tipo</th>
+          <th scope="col">Marca / modelo</th>
+          <th scope="col">Serie</th>
+          <th scope="col">Usuario</th>
+          <th scope="col">Ubicación</th>
+          <th scope="col">Área</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Observaciones</th>
+          <th scope="col">Acciones</th>
+        </tr>
+        </thead>
+
+        <tbody>
+          @for (equipo of equiposFiltrados; track equipo.id ?? $index) {
+            <tr>
+              <td><strong>{{ equipo.etiqueta }}</strong></td>
+              <td>{{ equipo.tipo }}</td>
+
+              <td>
+                <div class="marca">{{ equipo.marca }}</div>
+                <small>{{ equipo.modelo }}</small>
+              </td>
+
+              <td>{{ equipo.serie || '—' }}</td>
+              <td>{{ equipo.usuario || 'Sin asignar' }}</td>
+              <td>{{ equipo.ubicacion }}</td>
+              <td>{{ equipo.area || 'Sin asignar' }}</td>
+
+              <td>
+                <span class="estado" [attr.data-estado]="equipo.estado">
+                  {{ nombreEstado(equipo.estado) }}
+                </span>
+              </td>
+
+              <td class="observaciones">
+                {{ equipo.observaciones || 'Sin observaciones' }}
+              </td>
+
+              <td>
+                <div class="acciones-fila">
+                  <button
+                    type="button"
+                    class="icono-accion icono-editar"
+                    title="Editar equipo"
+                    [attr.aria-label]="'Editar ' + equipo.tipo + ' ' + equipo.etiqueta"
+                    [disabled]="guardando() || importando() || cargando() || !conexionLista()"
+                    (click)="editarEquipo(equipo)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="m16 3 5 5-12 12-6 1 1-6L16 3Z" />
+                      <path d="m14 5 5 5" />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="icono-accion icono-eliminar"
+                    title="Eliminar equipo"
+                    [attr.aria-label]="'Eliminar ' + equipo.tipo + ' ' + equipo.etiqueta"
+                    [disabled]="guardando() || importando() || cargando() || !conexionLista()"
+                    (click)="solicitarEliminar(equipo)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M9 6V4h6v2" />
+                      <path d="m5 6 1 14h12l1-14" />
+                      <path d="M10 10v6M14 10v6" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="10" class="vacio">
+                @if (cargando()) {
+                  <strong>Cargando equipos…</strong>
+                  <p>Estamos consultando el inventario.</p>
+                } @else if (!conexionLista()) {
+                  <strong>No se pudo consultar el inventario</strong>
+                  <p>Revisa la conexión y pulsa Actualizar.</p>
+                } @else if (equipos().length === 0) {
+                  <strong>Tu inventario está listo para comenzar</strong>
+                  <p>Agrega un equipo o importa tu archivo Excel.</p>
+                } @else {
+                  <strong>No se encontraron equipos</strong>
+                  <p>Cambia la búsqueda o los filtros de estado y área.</p>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

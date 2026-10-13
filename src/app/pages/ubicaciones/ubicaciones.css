@@ -1,0 +1,462 @@
+:host {
+  display: block;
+  color: #172033;
+}
+
+.pagina-ubicaciones,
+.pagina-ubicaciones * {
+  box-sizing: border-box;
+}
+
+.pagina-ubicaciones {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.encabezado,
+.titulo-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.subtitulo {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+h1 {
+  margin: 8px 0;
+  font-size: clamp(26px, 3vw, 34px);
+}
+
+h2 {
+  margin: 12px 0 6px;
+  font-size: 22px;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+p {
+  margin: 6px 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms;
+}
+
+.boton.principal {
+  background: #2563eb;
+  color: #fff;
+}
+
+.boton.principal:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.boton.secundario {
+  background: #fff;
+  color: #334155;
+  border-color: #dbe2ea;
+}
+
+.boton.secundario:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.boton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+.tabla-contenedor:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.indicador {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.indicador > span {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.indicador strong {
+  color: #0f172a;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.indicador small {
+  color: #64748b;
+}
+
+.panel {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgb(15 23 42 / 3%);
+}
+
+.titulo-panel {
+  margin-bottom: 24px;
+}
+
+.campo {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.campo label {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.campo input {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+}
+
+.titulo-panel > .campo {
+  flex: 0 1 320px;
+}
+
+.lista-ubicaciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 18px;
+}
+
+.tarjeta-ubicacion {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #dfe6ee;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.nombre-ubicacion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nombre-ubicacion h3 {
+  overflow-wrap: anywhere;
+}
+
+.nombre-ubicacion p {
+  font-size: 13px;
+}
+
+.icono-ubicacion {
+  display: grid;
+  flex: 0 0 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: #eff6ff;
+  font-size: 22px;
+}
+
+.total-ubicacion {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.total-ubicacion strong {
+  color: #1d4ed8;
+  font-size: 36px;
+}
+
+.total-ubicacion span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.estadisticas {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid #edf2f7;
+}
+
+.estadisticas > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.estadisticas dt {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.estadisticas dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.tarjeta-ubicacion > .boton {
+  width: 100%;
+  margin-top: auto;
+}
+
+.lista-areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.tarjeta-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 76px;
+  padding: 16px;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tarjeta-area span {
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta-area strong {
+  flex-shrink: 0;
+  font-size: 24px;
+}
+
+.tarjeta-area:hover {
+  background: #eff6ff;
+}
+
+.tarjeta-area.seleccionada {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px #2563eb;
+}
+
+.filtros {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.filtros .campo {
+  flex: 1 1 260px;
+}
+
+.contador {
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th {
+  padding: 14px 16px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+td {
+  padding: 15px 16px;
+  border-top: 1px solid #edf2f7;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+tbody tr:hover {
+  background: #fafcff;
+}
+
+.estado {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado[data-estado="activo"] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estado[data-estado="disponible"] {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.estado[data-estado="nuevo"] {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.estado[data-estado="reparacion"] {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.estado[data-estado="danado"] {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.estado[data-estado="reparado"] {
+  background: #ccfbf1;
+  color: #115e59;
+}
+
+.estado[data-estado="desechado"] {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.aviso {
+  padding: 14px 18px;
+  border: 1px solid;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+.aviso.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.aviso.informacion {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.vacio {
+  padding: 36px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.lista-ubicaciones > .vacio {
+  grid-column: 1 / -1;
+}
+
+.vacio .boton {
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  .resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .panel {
+    padding: 16px;
+  }
+
+  .indicador {
+    padding: 16px;
+  }
+
+  .encabezado > .boton,
+  .titulo-panel > .campo,
+  .filtros > .boton {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}

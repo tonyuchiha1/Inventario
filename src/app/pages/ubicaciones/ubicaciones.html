@@ -1,0 +1,288 @@
+<div class="pagina-ubicaciones">
+  <header class="encabezado">
+    <div>
+      <span class="subtitulo">DISTRIBUCIÓN DEL INVENTARIO</span>
+      <h1>Ubicaciones</h1>
+      <p>Consulta los equipos de cada ubicación y su distribución por área.</p>
+    </div>
+
+    <button
+      type="button"
+      class="boton principal"
+      [disabled]="cargando()"
+      (click)="cargarUbicaciones()"
+    >
+      {{ cargando() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <div class="aviso error" role="alert">
+      {{ error() }}
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="aviso informacion" role="status">
+      Consultando ubicaciones…
+    </div>
+  }
+
+  <section class="resumen" aria-label="Resumen de ubicaciones">
+    <article class="indicador">
+      <span>Ubicaciones</span>
+      <strong>
+        {{ cargando() || error() ? '—' : resumen().ubicaciones }}
+      </strong>
+      <small>Con equipos registrados</small>
+    </article>
+
+    <article class="indicador">
+      <span>Total de equipos</span>
+      <strong>
+        {{ cargando() || error() ? '—' : resumen().equipos }}
+      </strong>
+      <small>En el inventario</small>
+    </article>
+
+    <article class="indicador">
+      <span>Asignados</span>
+      <strong>
+        {{ cargando() || error() ? '—' : resumen().activos }}
+      </strong>
+      <small>En uso por colaboradores</small>
+    </article>
+
+    <article class="indicador">
+      <span>Sin ubicación</span>
+      <strong>
+        {{ cargando() || error() ? '—' : resumen().sinUbicacion }}
+      </strong>
+      <small>Pendientes de clasificar</small>
+    </article>
+  </section>
+
+  @if (!cargando() && !error()) {
+    @if (ubicacionSeleccionada() === null) {
+      <section class="panel">
+        <div class="titulo-panel">
+          <div>
+            <h2>Ubicaciones del inventario</h2>
+            <p>Selecciona una ubicación para consultar sus equipos.</p>
+          </div>
+
+          <div class="campo">
+            <label for="buscarUbicacion">Buscar ubicación</label>
+            <input
+              id="buscarUbicacion"
+              type="search"
+              name="buscarUbicacion"
+              [ngModel]="busqueda()"
+              (ngModelChange)="busqueda.set($event)"
+              placeholder="Ej. Carbonera"
+            />
+          </div>
+        </div>
+
+        <div class="lista-ubicaciones">
+          @for (ubicacion of ubicacionesFiltradas(); track ubicacion.clave) {
+            <article class="tarjeta-ubicacion">
+              <div class="nombre-ubicacion">
+                <span class="icono-ubicacion" aria-hidden="true">📍</span>
+
+                <div>
+                  <h3>{{ ubicacion.nombre }}</h3>
+                  <p>{{ ubicacion.areas }} áreas con equipos</p>
+                </div>
+              </div>
+
+              <div class="total-ubicacion">
+                <strong>{{ ubicacion.total }}</strong>
+                <span>equipos registrados</span>
+              </div>
+
+              <dl class="estadisticas">
+                <div>
+                  <dt>Asignados</dt>
+                  <dd>{{ ubicacion.activos }}</dd>
+                </div>
+
+                <div>
+                  <dt>Disponibles</dt>
+                  <dd>{{ ubicacion.disponibles }}</dd>
+                </div>
+
+                <div>
+                  <dt>En reparación</dt>
+                  <dd>{{ ubicacion.reparacion }}</dd>
+                </div>
+              </dl>
+
+              <button
+                type="button"
+                class="boton secundario"
+                [attr.aria-label]="'Ver equipos de ' + ubicacion.nombre"
+                (click)="seleccionarUbicacion(ubicacion)"
+              >
+                Ver equipos →
+              </button>
+            </article>
+          } @empty {
+            <div class="vacio">
+              @if (equipos().length === 0) {
+                <h3>Todavía no hay ubicaciones con equipos</h3>
+                <p>
+                  Registra equipos en la sección Equipos e indica su ubicación.
+                </p>
+              } @else {
+                <h3>No se encontraron ubicaciones</h3>
+                <p>Prueba con otro nombre.</p>
+
+                <button
+                  type="button"
+                  class="boton secundario"
+                  (click)="busqueda.set('')"
+                >
+                  Limpiar búsqueda
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    } @else {
+      @if (detalleUbicacion(); as ubicacion) {
+        <section class="panel">
+          <div class="titulo-panel">
+            <div>
+              <button
+                type="button"
+                class="boton secundario"
+                (click)="volver()"
+              >
+                ← Todas las ubicaciones
+              </button>
+
+              <h2>{{ ubicacion.nombre }}</h2>
+              <p>
+                {{ ubicacion.total }} equipos registrados en esta ubicación.
+              </p>
+            </div>
+          </div>
+
+          <h3>Distribución por área</h3>
+
+          <div class="lista-areas" aria-label="Filtrar equipos por área">
+            <button
+              type="button"
+              class="tarjeta-area"
+              [class.seleccionada]="areaSeleccionada() === null"
+              [attr.aria-pressed]="areaSeleccionada() === null"
+              (click)="seleccionarArea(null)"
+            >
+              <span>Todas las áreas</span>
+              <strong>{{ ubicacion.total }}</strong>
+            </button>
+
+            @for (area of areasDeUbicacion(); track area.clave) {
+              <button
+                type="button"
+                class="tarjeta-area"
+                [class.seleccionada]="areaSeleccionada() === area.clave"
+                [attr.aria-pressed]="areaSeleccionada() === area.clave"
+                (click)="seleccionarArea(area.clave)"
+              >
+                <span>{{ area.nombre }}</span>
+                <strong>{{ area.total }}</strong>
+              </button>
+            }
+          </div>
+
+          <div class="filtros">
+            <div class="campo">
+              <label for="buscarEquipo">Buscar dentro de esta ubicación</label>
+              <input
+                id="buscarEquipo"
+                type="search"
+                name="buscarEquipo"
+                [ngModel]="busquedaEquipo()"
+                (ngModelChange)="busquedaEquipo.set($event)"
+                placeholder="Etiqueta, tipo, marca, usuario o área…"
+              />
+            </div>
+
+            <button
+              type="button"
+              class="boton secundario"
+              [disabled]="!busquedaEquipo() && areaSeleccionada() === null"
+              (click)="limpiarFiltrosEquipos()"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
+          <p class="contador">
+            Mostrando {{ equiposFiltrados().length }}
+            de {{ ubicacion.total }} equipos.
+          </p>
+
+          <div
+            class="tabla-contenedor"
+            role="region"
+            aria-label="Equipos de la ubicación seleccionada"
+            tabindex="0"
+          >
+            <table>
+              <thead>
+              <tr>
+                <th scope="col">Etiqueta</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Marca / modelo</th>
+                <th scope="col">Usuario</th>
+                <th scope="col">Área</th>
+                <th scope="col">Estado</th>
+              </tr>
+              </thead>
+
+              <tbody>
+                @for (equipo of equiposFiltrados(); track equipo.id ?? $index) {
+                  <tr>
+                    <td>
+                      <strong>{{ equipo.etiqueta }}</strong>
+                    </td>
+
+                    <td>{{ equipo.tipo }}</td>
+
+                    <td>
+                      <div>{{ equipo.marca }}</div>
+                      <small>{{ equipo.modelo }}</small>
+                    </td>
+
+                    <td>{{ equipo.usuario || 'Sin asignar' }}</td>
+                    <td>{{ equipo.area || 'Sin área asignada' }}</td>
+
+                    <td>
+                      <span
+                        class="estado"
+                        [attr.data-estado]="equipo.estado"
+                      >
+                        {{ nombreEstado(equipo.estado) }}
+                      </span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="vacio">
+                      <strong>No se encontraron equipos</strong>
+                      <p>Cambia la búsqueda o selecciona otra área.</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

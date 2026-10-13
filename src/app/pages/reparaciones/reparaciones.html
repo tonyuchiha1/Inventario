@@ -1,0 +1,450 @@
+<div class="pagina-reparaciones">
+  <header class="encabezado">
+    <div>
+      <span class="subtitulo">ATENCIÓN TÉCNICA</span>
+      <h1>Reparaciones</h1>
+      <p>
+        Consulta los reportes en reparación, registra avances
+        y documenta la solución.
+      </p>
+    </div>
+
+    <div class="acciones">
+      <a class="boton secundario" routerLink="/reportes">
+        Ver reportes
+      </a>
+
+      <button
+        type="button"
+        class="boton principal"
+        [disabled]="cargando() || guardando() || seleccionado() !== null"
+        (click)="cargarReparaciones()"
+      >
+        {{ cargando() ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="aviso error" role="alert">
+      {{ error() }}
+    </div>
+  }
+
+  @if (mensaje()) {
+    <div class="aviso exito" role="status">
+      {{ mensaje() }}
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="aviso informacion" role="status">
+      Consultando reparaciones…
+    </div>
+  }
+
+  <section class="resumen" aria-label="Filtrar por prioridad">
+    <button
+      type="button"
+      class="indicador azul"
+      [class.seleccionado]="filtroPrioridad() === ''"
+      [attr.aria-pressed]="filtroPrioridad() === ''"
+      (click)="seleccionarPrioridad('')"
+    >
+      <span>En reparación</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().total }}
+      </strong>
+      <small>Reportes activos de reparación</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador rojo"
+      [class.seleccionado]="filtroPrioridad() === 'alta'"
+      [attr.aria-pressed]="filtroPrioridad() === 'alta'"
+      (click)="seleccionarPrioridad('alta')"
+    >
+      <span>Prioridad alta</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().alta }}
+      </strong>
+      <small>Atención prioritaria</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador naranja"
+      [class.seleccionado]="filtroPrioridad() === 'media'"
+      [attr.aria-pressed]="filtroPrioridad() === 'media'"
+      (click)="seleccionarPrioridad('media')"
+    >
+      <span>Prioridad media</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().media }}
+      </strong>
+      <small>Seguimiento regular</small>
+    </button>
+
+    <button
+      type="button"
+      class="indicador verde"
+      [class.seleccionado]="filtroPrioridad() === 'baja'"
+      [attr.aria-pressed]="filtroPrioridad() === 'baja'"
+      (click)="seleccionarPrioridad('baja')"
+    >
+      <span>Prioridad baja</span>
+      <strong>
+        {{ cargando() || !conexionLista() ? '—' : resumen().baja }}
+      </strong>
+      <small>Atención programable</small>
+    </button>
+  </section>
+
+  @if (seleccionado(); as reporte) {
+    <section class="panel">
+      <div class="titulo-panel">
+        <div>
+          <span class="folio">{{ reporte.folio }}</span>
+          <h2>
+            {{ reporte.equipo.tipo }} · {{ reporte.equipo.etiqueta }}
+          </h2>
+          <p>
+            {{ reporte.equipo.marca }} {{ reporte.equipo.modelo }}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="boton secundario"
+          [disabled]="guardando()"
+          (click)="cerrarDetalle()"
+        >
+          Cerrar detalle
+        </button>
+      </div>
+
+      @if (errorFormulario()) {
+        <div class="aviso error aviso-formulario" role="alert">
+          {{ errorFormulario() }}
+        </div>
+      }
+
+      <dl class="datos-reporte">
+        <div>
+          <dt>Reportado por</dt>
+          <dd>{{ reporte.reportadoPor }}</dd>
+        </div>
+
+        <div>
+          <dt>Fecha del reporte</dt>
+          <dd>{{ fecha(reporte.fechaReporte) }}</dd>
+        </div>
+
+        <div>
+          <dt>Ubicación</dt>
+          <dd>{{ reporte.equipo.ubicacion || 'Sin ubicación' }}</dd>
+        </div>
+
+        <div>
+          <dt>Área</dt>
+          <dd>{{ reporte.equipo.area || 'Sin área asignada' }}</dd>
+        </div>
+
+        <div>
+          <dt>Serie</dt>
+          <dd>{{ reporte.equipo.serie || 'Sin serie' }}</dd>
+        </div>
+
+        <div>
+          <dt>Prioridad</dt>
+          <dd>
+            <span
+              class="etiqueta"
+              [attr.data-prioridad]="reporte.prioridad"
+            >
+              {{ nombrePrioridad(reporte.prioridad) }}
+            </span>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="bloque-detalle">
+        <h3>Falla reportada</h3>
+        <p class="texto-largo">{{ reporte.descripcion }}</p>
+      </div>
+
+      <form
+        #formulario="ngForm"
+        (ngSubmit)="guardarSeguimiento()"
+      >
+        <fieldset
+          [disabled]="guardando() || cargando() || !conexionLista()"
+        >
+          <div class="campo">
+            <label for="diagnosticoReparacion">Diagnóstico *</label>
+
+            <textarea
+              id="diagnosticoReparacion"
+              name="diagnosticoReparacion"
+              [(ngModel)]="diagnostico"
+              maxlength="2000"
+              rows="4"
+              placeholder="Describe la causa de la falla y la revisión realizada."
+              required
+            ></textarea>
+
+            <small>{{ diagnostico.length }}/2000 caracteres</small>
+          </div>
+
+          <div class="campo">
+            <label for="solucionReparacion">
+              Trabajo realizado / solución {{ finalizar ? '*' : '' }}
+            </label>
+
+            <textarea
+              id="solucionReparacion"
+              name="solucionReparacion"
+              [(ngModel)]="solucion"
+              [required]="finalizar"
+              maxlength="2000"
+              rows="5"
+              placeholder="Describe los trabajos realizados, pruebas y resultado."
+            ></textarea>
+
+            <small>
+              {{ solucion.length }}/2000 caracteres.
+              Puedes ampliar este texto antes de finalizar.
+            </small>
+          </div>
+
+          <label class="opcion-finalizar" for="finalizarReparacion">
+            <input
+              id="finalizarReparacion"
+              name="finalizarReparacion"
+              type="checkbox"
+              [(ngModel)]="finalizar"
+            />
+
+            <span>
+              <strong>Finalizar reparación y resolver el reporte</strong>
+              <small>
+                Márcalo cuando hayas terminado y comprobado la solución.
+                El reporte quedará cerrado para consulta.
+              </small>
+            </span>
+          </label>
+
+          <div class="pie-formulario">
+            <small>
+              {{
+                finalizar
+                  ? 'Se requiere diagnóstico y solución.'
+                  : 'El reporte continuará en reparación.'
+              }}
+            </small>
+
+            <button
+              type="submit"
+              class="boton principal"
+              [disabled]="formulario.invalid || !diagnostico.trim() || (finalizar && !solucion.trim()) || guardando()"
+            >
+              {{
+                guardando()
+                  ? 'Guardando…'
+                  : finalizar
+                    ? 'Finalizar reparación'
+                    : 'Guardar avances'
+              }}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+
+      <p class="nota">
+        Última actualización:
+        {{ fecha(reporte.fechaActualizacion) }}
+      </p>
+    </section>
+  }
+
+  <section class="panel" [attr.aria-busy]="cargando()">
+    <div class="titulo-panel">
+      <div>
+        <h2>Reportes en reparación</h2>
+        <p>
+          Ordenados por prioridad y, después, por fecha del reporte.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="boton secundario"
+        [disabled]="!busqueda() && !filtroPrioridad()"
+        (click)="limpiarFiltros()"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+
+    <div class="filtros">
+      <div class="campo">
+        <label for="buscarReparacion">Buscar</label>
+
+        <input
+          id="buscarReparacion"
+          name="buscarReparacion"
+          type="search"
+          [ngModel]="busqueda()"
+          (ngModelChange)="busqueda.set($event)"
+          placeholder="Folio, etiqueta, equipo, área o diagnóstico…"
+        />
+      </div>
+
+      <div class="campo">
+        <label for="prioridadReparacion">Prioridad</label>
+
+        <select
+          id="prioridadReparacion"
+          name="prioridadReparacion"
+          [ngModel]="filtroPrioridad()"
+          (ngModelChange)="filtroPrioridad.set($event)"
+        >
+          <option value="">Todas las prioridades</option>
+
+          @for (prioridad of prioridades; track prioridad.valor) {
+            <option [value]="prioridad.valor">
+              {{ prioridad.nombre }}
+            </option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (!cargando() && conexionLista()) {
+      <p class="contador">
+        Mostrando {{ reparacionesFiltradas().length }}
+        de {{ reparaciones().length }} reportes en reparación.
+      </p>
+    }
+
+    <div
+      class="tabla-contenedor"
+      role="region"
+      aria-label="Listado de reportes en reparación"
+      tabindex="0"
+    >
+      <table>
+        <thead>
+        <tr>
+          <th scope="col">Folio</th>
+          <th scope="col">Equipo</th>
+          <th scope="col">Ubicación / área</th>
+          <th scope="col">Falla</th>
+          <th scope="col">Diagnóstico</th>
+          <th scope="col">Prioridad</th>
+          <th scope="col">Fecha del reporte</th>
+          <th scope="col">Acción</th>
+        </tr>
+        </thead>
+
+        <tbody>
+          @if (cargando() || (!conexionLista() && !error())) {
+            <tr>
+              <td colspan="8" class="vacio">
+                Cargando reparaciones…
+              </td>
+            </tr>
+          } @else if (!conexionLista()) {
+            <tr>
+              <td colspan="8" class="vacio">
+                <strong>No se pudo cargar la información</strong>
+                <p>Comprueba el backend y pulsa Actualizar.</p>
+              </td>
+            </tr>
+          } @else {
+            @for (reporte of reparacionesFiltradas(); track reporte.id) {
+              <tr>
+                <td>
+                  <strong class="folio-tabla">{{ reporte.folio }}</strong>
+                </td>
+
+                <td>
+                  <strong>{{ reporte.equipo.etiqueta }}</strong>
+                  <small>{{ reporte.equipo.tipo }}</small>
+                  <small>
+                    {{ reporte.equipo.marca }} {{ reporte.equipo.modelo }}
+                  </small>
+                </td>
+
+                <td>
+                  <div>{{ reporte.equipo.ubicacion }}</div>
+                  <small>
+                    {{ reporte.equipo.area || 'Sin área asignada' }}
+                  </small>
+                </td>
+
+                <td class="texto-celda">
+                  {{ reporte.descripcion }}
+                </td>
+
+                <td class="texto-celda">
+                  {{ reporte.diagnostico || 'Sin diagnóstico registrado' }}
+                </td>
+
+                <td>
+                  <span
+                    class="etiqueta"
+                    [attr.data-prioridad]="reporte.prioridad"
+                  >
+                    {{ nombrePrioridad(reporte.prioridad) }}
+                  </span>
+                </td>
+
+                <td class="fecha">
+                  {{ fecha(reporte.fechaReporte) }}
+                </td>
+
+                <td>
+                  <button
+                    type="button"
+                    class="boton secundario"
+                    [disabled]="guardando()"
+                    [attr.aria-label]="'Atender reparación ' + reporte.folio"
+                    (click)="atender(reporte)"
+                  >
+                    Atender
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="vacio">
+                  @if (reparaciones().length === 0) {
+                    <strong>No hay reportes en reparación</strong>
+                    <p>
+                      Desde Reportes, abre una incidencia y cambia
+                      su seguimiento a En reparación.
+                    </p>
+                    <a class="enlace" routerLink="/reportes">
+                      Ir a Reportes →
+                    </a>
+                  } @else {
+                    <strong>No se encontraron coincidencias</strong>
+                    <p>Cambia la búsqueda o la prioridad.</p>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="nota">
+      Las reparaciones finalizadas se consultan en
+      <a routerLink="/reportes">Reportes</a>,
+      seleccionando el estado Resuelto.
+    </p>
+  </section>
+</div>
